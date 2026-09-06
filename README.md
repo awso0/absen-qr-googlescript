@@ -1,7 +1,7 @@
 # Absen-QR — hillaryours.id (Fanbase JKT48)
 
 Landing page **absensi QR** untuk fanbase **hillaryours.id** bertema ungu. QR
-di-scan lewat kamera HP, lalu dicatat **Masuk/Pulang** ke Google Spreadsheet
+di-scan lewat kamera HP, lalu dicatat **absensi masuk** ke Google Spreadsheet
 melalui **Apps Script** yang dijadikan **JSON API**.
 
 > ⚠️ **Kenapa dulu kamera tidak bisa dibuka di script Google?**
@@ -104,9 +104,11 @@ npm run build      # hasil siap deploy ada di dist/
 1. Buka landing → **📷 Scan QR** (atau **ketik ID manual**).
 2. QR terbaca → `lookup` ke Master Data → layar **konfirmasi**: data member
    tampil + field **Nama bisa diedit** (untuk kasus *titipan*).
-3. Klik **Konfirmasi Absen** → `record` → status **Masuk**/**Pulang** otomatis
-   (catatan ke-1 = Masuk, ke-2 = Pulang, sudah 2x = ditolak).
+3. Klik **Konfirmasi Absen** → `record` → tercatat status **Masuk**.
 4. Layar sukses menampilkan ringkasan.
+
+Mode absen: **hanya Masuk** — 1 ID maksimal 1x per hari. Scan berikutnya pada
+hari yang sama ditolak ("sudah absen Masuk hari ini").
 
 Aturan (sama seperti script asli):
 - **Cooldown 5 detik** anti-scan-ganda per ID.

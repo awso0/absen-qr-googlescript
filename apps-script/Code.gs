@@ -26,10 +26,13 @@
  * > Script properties). Kalau diisi, klien wajib kirim { token: "..." }.
  * Kalau kosong, tidak ada cek token.
  *
+ * MODE: hanya absen MASUK — 1 ID maksimal 1x per hari. Scan berikutnya
+ * pada hari yang sama akan ditolak ("sudah absen Masuk hari ini").
+ *
  * Struktur Spreadsheet (2 sheet):
  *   "Master Data" : A:ID  B:Nama  C:Nama Fanbase  D:Nama Member JKT48  E:Status Aktif
  *   "Log Absensi" : A:Timestamp  B:Tanggal  C:ID  D:Nama  E:Nama Fanbase
- *                   F:Nama Member JKT48  G:Status(Masuk/Pulang)  H:Keterangan(Sendiri/Titipan)
+ *                   F:Nama Member JKT48  G:Status(Masuk)  H:Keterangan(Sendiri/Titipan)
  */
 
 const SHEET_MASTER = "Master Data";
@@ -212,15 +215,12 @@ function recordScan(rawId, namaInput) {
       }
     }
 
-    // 4. Tentukan status Masuk/Pulang
-    let statusBaru;
-    if (entriesToday.length === 0) {
-      statusBaru = "Masuk";
-    } else if (entriesToday.length === 1) {
-      statusBaru = "Pulang";
-    } else {
-      return { ok: false, message: `ID "${id}" sudah absen Masuk & Pulang hari ini.` };
+    // 4. Mode absen: HANYA "Masuk" (1x per hari per ID).
+    //    Kalau sudah tercatat hari ini, tolak — tidak ada absen Pulang.
+    if (entriesToday.length > 0) {
+      return { ok: false, message: `ID "${id}" sudah absen Masuk hari ini.` };
     }
+    const statusBaru = "Masuk";
 
     // 5. Tentukan Keterangan: Sendiri kalau nama sama persis dengan Master Data, Titipan kalau beda
     const keterangan =
