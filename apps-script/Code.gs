@@ -114,8 +114,14 @@ function lookupId(rawId) {
   for (let i = 1; i < masterData.length; i++) {
     if (String(masterData[i][0]).trim() === id) {
       const statusAktif = masterData[i][4];
+      const nama = String(masterData[i][1] || "").trim();
+      const fanbase = String(masterData[i][2] || "").trim();
+      const identitas = fanbase ? `"${nama}" (${fanbase})` : `"${nama}"`;
       if (String(statusAktif).toLowerCase() === "nonaktif") {
-        return { ok: false, message: `ID "${id}" berstatus Nonaktif.` };
+        return {
+          ok: false,
+          message: `${identitas} berstatus Nonaktif, tidak bisa absen.`,
+        };
       }
       return {
         ok: true,
@@ -173,8 +179,14 @@ function recordScan(rawId, namaInput) {
     if (!found) {
       return { ok: false, message: `ID "${id}" tidak terdaftar di Master Data.` };
     }
+    // Helper: tampilkan identitas (nama + fanbase) supaya pesan informatif.
+    const namaLengkap = () => {
+      const n = String(found.namaAsli || "").trim();
+      const fb = String(found.namaFanbase || "").trim();
+      return fb ? `"${n}" (${fb})` : `"${n}"`;
+    };
     if (String(found.statusAktif).toLowerCase() === "nonaktif") {
-      return { ok: false, message: `ID "${id}" berstatus Nonaktif.` };
+      return { ok: false, message: `${namaLengkap()} berstatus Nonaktif, tidak bisa absen.` };
     }
 
     const now = new Date();
@@ -211,14 +223,14 @@ function recordScan(rawId, namaInput) {
     if (lastEntryTime) {
       const selisihDetik = (now - lastEntryTime) / 1000;
       if (selisihDetik < COOLDOWN_DETIK) {
-        return { ok: false, message: `ID "${id}" baru saja absen, tunggu sebentar.` };
+        return { ok: false, message: `${namaLengkap()} baru saja absen, tunggu sebentar.` };
       }
     }
 
     // 4. Mode absen: HANYA "Masuk" (1x per hari per ID).
     //    Kalau sudah tercatat hari ini, tolak — tidak ada absen Pulang.
     if (entriesToday.length > 0) {
-      return { ok: false, message: `ID "${id}" sudah absen Masuk hari ini.` };
+      return { ok: false, message: `${namaLengkap()} sudah absen Masuk hari ini.` };
     }
     const statusBaru = "Masuk";
 
