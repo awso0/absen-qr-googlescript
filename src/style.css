@@ -455,6 +455,14 @@ body {
   background: rgba(167, 139, 250, 0.14);
   color: var(--text-dim);
 }
+.badge-terpakai {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(109, 40, 217, 0.18));
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  color: #e9d5ff;
+  font-size: 12px;
+  padding: 8px 14px;
+  box-shadow: 0 4px 16px rgba(109, 40, 217, 0.25);
+}
 
 /* ---------- Toast / notice ---------- */
 .toast {

@@ -114,7 +114,7 @@ export function renderConfirm(root: HTMLElement, s: AppState): void {
   );
 }
 
-/** Layar sukses setelah record. */
+/** Layar sukses setelah record (konfirmasi kehadiran undangan). */
 export function renderSuccess(root: HTMLElement, s: AppState): void {
   clear(root);
   const r = s.lastRecord;
@@ -123,24 +123,31 @@ export function renderSuccess(root: HTMLElement, s: AppState): void {
   const isMasuk = r.status === "Masuk";
   root.append(
     el("div", { class: "screen", "data-screen": "success" }, [
-      el("div", { class: "success-icon" }, [txt(isMasuk ? "✅" : "👋")]),
-      el("div", { class: "success-title" }, [txt(`${r.status} berhasil!`)]),
-      el("div", { class: "success-sub" }, [
-        el("p", {}, [
-          el("strong", {}, [txt(r.nama)]),
-          txt(" — kehadiran kamu sudah tercatat. QR ini tidak bisa dipakai lagi."),
+      el("div", { class: "hero", style: "padding:18px 0 2px;" }, [
+        el("div", { class: "success-icon" }, [txt(isMasuk ? "🎉" : "👋")]),
+        el("h1", { class: "success-title", style: "margin-top:14px;" }, [
+          txt(isMasuk ? "Kehadiran Terkonfirmasi!" : "Sampai Jumpa!"),
         ]),
+        el("p", { class: "success-sub", style: "margin-top:8px;" }, [
+          txt(`Selamat datang, ${r.nama}! QR undangan kamu sudah berhasil dipakai.`),
+        ]),
+      ]),
+      el("div", { class: "badge badge-terpakai", style: "align-self:center;" }, [
+        txt("🎟️ QR Sudah Digunakan — tidak bisa dipakai lagi"),
       ]),
       el("div", { class: "card", style: "padding:16px 20px;" }, [
         el("div", { class: "detail-list" }, [
-          detail("ID", r.id),
           detail("Nama", r.nama),
           detail("Fanbase", r.namaFanbase || "-"),
           detail("Member", r.namaMember || "-"),
           detail("Status", r.status),
           detail("Keterangan", r.keterangan),
           detail("Waktu", r.waktu),
+          detail("ID", r.id),
         ]),
+      ]),
+      el("p", { class: "success-sub", style: "text-align:center;" }, [
+        txt("Terima kasih sudah hadir. Nikmati acaranya! 💜"),
       ]),
       el("button", { class: "btn btn-primary", id: "success-done", type: "button" }, [txt("Selesai")]),
     ]),
