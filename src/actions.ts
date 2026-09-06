@@ -25,6 +25,34 @@ export function toast(kind: "error" | "info" | "success", text: string, ms = 320
   }, ms);
 }
 
+/* ============ OVERLAY LOADING (tidak lewat render layar) ============ */
+
+/**
+ * Tampilkan overlay loading "sedang memproses" di atas layar saat ini.
+ * Sengaja TIDAK lewat state/render layar, supaya elemen <video> kamera
+ * tidak dihancurkan saat scanner aktif.
+ */
+export function showBusy(message: string): void {
+  hideBusy();
+  const overlay = document.createElement("div");
+  overlay.id = "busy-overlay";
+  overlay.className = "busy-overlay";
+  const box = document.createElement("div");
+  box.className = "busy-box";
+  const spin = document.createElement("div");
+  spin.className = "spinner";
+  const label = document.createElement("div");
+  label.className = "busy-label";
+  label.textContent = message;
+  box.append(spin, label);
+  overlay.append(box);
+  document.body.append(overlay);
+}
+
+export function hideBusy(): void {
+  document.querySelector("#busy-overlay")?.remove();
+}
+
 /* ============ KAMERA ============ */
 
 export async function startCamera(): Promise<void> {
@@ -117,9 +145,10 @@ export async function handleScanResult(raw: string): Promise<void> {
 
   // jeda kecil supaya QR yang sama tidak ter-trigger 2x
   stopCamera();
-  setState({ busy: true });
+  showBusy("Mencari data…");
   try {
     const res = await lookupId(id);
+    hideBusy();
     if (!res.ok || !res.data) {
       toast("error", res.message || "ID tidak dikenal.");
       // kembali ke scanner untuk coba lagi
@@ -136,11 +165,10 @@ export async function handleScanResult(raw: string): Promise<void> {
       },
     });
   } catch (err) {
+    hideBusy();
     console.error(err);
     toast("error", "Gagal menghubungi server. Coba lagi.");
     startScannerScreen();
-  } finally {
-    setState({ busy: false });
   }
 }
 
@@ -161,9 +189,10 @@ export async function confirmScan(): Promise<void> {
     return;
   }
 
-  setState({ busy: true });
+  showBusy("Menyimpan absensi…");
   try {
     const res = await recordScan(p.id, nama);
+    hideBusy();
     if (!res.ok || !res.data) {
       toast("error", res.message || "Gagal mencatat absensi.");
       return;
@@ -182,10 +211,9 @@ export async function confirmScan(): Promise<void> {
       },
     });
   } catch (err) {
+    hideBusy();
     console.error(err);
     toast("error", "Gagal mencatat absensi. Cek koneksi & coba lagi.");
-  } finally {
-    setState({ busy: false });
   }
 }
 
@@ -197,9 +225,10 @@ export async function checkManualId(): Promise<void> {
     toast("error", "Masukkan ID dulu.");
     return;
   }
-  setState({ busy: true });
+  showBusy("Mencari data…");
   try {
     const res = await lookupId(id);
+    hideBusy();
     if (!res.ok || !res.data) {
       toast("error", res.message || "ID tidak dikenal.");
       return;
@@ -214,10 +243,9 @@ export async function checkManualId(): Promise<void> {
       },
     });
   } catch (err) {
+    hideBusy();
     console.error(err);
     toast("error", "Gagal menghubungi server.");
-  } finally {
-    setState({ busy: false });
   }
 }
 
@@ -229,9 +257,10 @@ export async function checkHomeManualId(): Promise<void> {
     toast("error", "Masukkan ID dulu.");
     return;
   }
-  setState({ busy: true });
+  showBusy("Mencari data…");
   try {
     const res = await lookupId(id);
+    hideBusy();
     if (!res.ok || !res.data) {
       toast("error", res.message || "ID tidak dikenal.");
       return;
@@ -246,10 +275,9 @@ export async function checkHomeManualId(): Promise<void> {
       },
     });
   } catch (err) {
+    hideBusy();
     console.error(err);
     toast("error", "Gagal menghubungi server.");
-  } finally {
-    setState({ busy: false });
   }
 }
 

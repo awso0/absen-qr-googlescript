@@ -487,6 +487,73 @@ body {
   border-color: rgba(196, 181, 253, 0.4);
 }
 
+/* ---------- Overlay loading (sedang mencari/menyimpan) ---------- */
+.busy-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 6, 22, 0.62);
+  backdrop-filter: blur(3px);
+  animation: fadeUp 0.18s ease both;
+}
+
+.busy-box {
+  background: rgba(30, 18, 56, 0.95);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 20px;
+  padding: 28px 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  min-width: 200px;
+}
+
+.busy-box .spinner {
+  width: 34px;
+  height: 34px;
+  border-width: 3px;
+  border-color: rgba(167, 139, 250, 0.25);
+  border-top-color: #c4b5fd;
+  margin: 0;
+}
+
+.busy-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+
+.busy-label::after {
+  content: "";
+  display: inline-block;
+  width: 1.1em;
+  text-align: left;
+  animation: dots 1.2s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75% {
+    content: "...";
+  }
+  100% {
+    content: "";
+  }
+}
+
 /* ---------- Sukses ---------- */
 .success-icon {
   width: 86px;
