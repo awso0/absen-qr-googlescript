@@ -183,9 +183,19 @@ function recordScan(rawId, namaInput) {
     let entriesToday = [];
     let lastEntryTime = null;
 
+    // Normalisasi kolom Tanggal (B): bisa berupa string "yyyy-MM-dd" ATAU
+    // objek Date (tergantung bagaimana Sheets menyimpannya). Samakan dulu
+    // ke format "yyyy-MM-dd" supaya perbandingan selalu benar.
+    const normTanggal = (v) => {
+      if (v instanceof Date && !isNaN(v.getTime())) {
+        return Utilities.formatDate(v, tz, "yyyy-MM-dd");
+      }
+      return String(v || "").trim();
+    };
+
     for (let i = 1; i < logData.length; i++) {
       const row = logData[i];
-      const rowTanggal = row[1];
+      const rowTanggal = normTanggal(row[1]);
       const rowId = String(row[2]).trim();
       if (rowId === id && rowTanggal === tanggalHariIni) {
         entriesToday.push(row);
