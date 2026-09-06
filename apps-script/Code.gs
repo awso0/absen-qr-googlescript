@@ -26,8 +26,9 @@
  * > Script properties). Kalau diisi, klien wajib kirim { token: "..." }.
  * Kalau kosong, tidak ada cek token.
  *
- * MODE: hanya absen MASUK — 1 ID maksimal 1x per hari. Scan berikutnya
- * pada hari yang sama akan ditolak ("sudah absen Masuk hari ini").
+ * MODE: QR undangan SEKALI PAKAI (permanen). Begitu sebuah ID tercatat
+ * pernah hadir di Log Absensi, scan berikutnya (kapan pun) ditolak dengan
+ * pesan "QR sudah digunakan". Status yang dicatat: "Masuk".
  *
  * Struktur Spreadsheet (2 sheet):
  *   "Master Data" : A:ID  B:Nama  C:Nama Fanbase  D:Nama Member JKT48  E:Status Aktif
@@ -120,8 +121,21 @@ function lookupId(rawId) {
       if (String(statusAktif).toLowerCase() === "nonaktif") {
         return {
           ok: false,
-          message: `${identitas} berstatus Nonaktif, tidak bisa absen.`,
+          message: `${identitas} berstatus Nonaktif, tidak bisa masuk.`,
         };
+      }
+      // QR undangan sekali pakai: cek apakah ID ini sudah pernah tercatat.
+      const logSheet = ss.getSheetByName(SHEET_LOG);
+      if (logSheet) {
+        const logData = logSheet.getDataRange().getValues();
+        for (let j = 1; j < logData.length; j++) {
+          if (String(logData[j][2]).trim() === id) {
+            return {
+              ok: false,
+              message: `${identitas} — QR sudah digunakan.`,
+            };
+          }
+        }
       }
       return {
         ok: true,
@@ -191,48 +205,39 @@ function recordScan(rawId, namaInput) {
 
     const now = new Date();
     const tz = ss.getSpreadsheetTimeZone();
-    const tanggalHariIni = Utilities.formatDate(now, tz, "yyyy-MM-dd");
 
-    // 2. Ambil log hari ini untuk ID ini (cek Masuk/Pulang & cooldown)
+    // 2. QR undangan SEKALI PAKAI (permanen): cek apakah ID ini PERNAH
+    //    tercatat di Log Absensi, kapan pun. Kalau sudah → tolak.
     const logData = logSheet.getDataRange().getValues();
-    let entriesToday = [];
+    let pernahDipakai = false;
     let lastEntryTime = null;
-
-    // Normalisasi kolom Tanggal (B): bisa berupa string "yyyy-MM-dd" ATAU
-    // objek Date (tergantung bagaimana Sheets menyimpannya). Samakan dulu
-    // ke format "yyyy-MM-dd" supaya perbandingan selalu benar.
-    const normTanggal = (v) => {
-      if (v instanceof Date && !isNaN(v.getTime())) {
-        return Utilities.formatDate(v, tz, "yyyy-MM-dd");
-      }
-      return String(v || "").trim();
-    };
 
     for (let i = 1; i < logData.length; i++) {
       const row = logData[i];
-      const rowTanggal = normTanggal(row[1]);
       const rowId = String(row[2]).trim();
-      if (rowId === id && rowTanggal === tanggalHariIni) {
-        entriesToday.push(row);
+      if (rowId === id) {
+        pernahDipakai = true;
         const t = new Date(row[0]);
         if (!lastEntryTime || t > lastEntryTime) lastEntryTime = t;
       }
     }
 
-    // 3. Cooldown anti-scan-ganda
+    // 3. Tolak kalau QR sudah pernah dipakai (sekali seumur hidup)
+    if (pernahDipakai) {
+      return { ok: false, message: `${namaLengkap()} — QR sudah digunakan.` };
+    }
+
+    // Anti dobel-klik / scan ganda dalam beberapa detik terakhir
     if (lastEntryTime) {
       const selisihDetik = (now - lastEntryTime) / 1000;
       if (selisihDetik < COOLDOWN_DETIK) {
-        return { ok: false, message: `${namaLengkap()} baru saja absen, tunggu sebentar.` };
+        return { ok: false, message: `${namaLengkap()} baru saja dipakai, tunggu sebentar.` };
       }
     }
 
-    // 4. Mode absen: HANYA "Masuk" (1x per hari per ID).
-    //    Kalau sudah tercatat hari ini, tolak — tidak ada absen Pulang.
-    if (entriesToday.length > 0) {
-      return { ok: false, message: `${namaLengkap()} sudah absen Masuk hari ini.` };
-    }
+    // 4. QR valid & belum dipakai → catat status "Masuk"
     const statusBaru = "Masuk";
+    const tanggalHariIni = Utilities.formatDate(now, tz, "yyyy-MM-dd");
 
     // 5. Tentukan Keterangan: Sendiri kalau nama sama persis dengan Master Data, Titipan kalau beda
     const keterangan =

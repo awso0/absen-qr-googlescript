@@ -189,12 +189,12 @@ export async function confirmScan(): Promise<void> {
     return;
   }
 
-  showBusy("Menyimpan absensi…");
+  showBusy("Menyimpan kehadiran…");
   try {
     const res = await recordScan(p.id, nama);
     hideBusy();
     if (!res.ok || !res.data) {
-      toast("error", res.message || "Gagal mencatat absensi.");
+      toast("error", res.message || "Gagal mencatat kehadiran.");
       return;
     }
     setState({
@@ -213,7 +213,7 @@ export async function confirmScan(): Promise<void> {
   } catch (err) {
     hideBusy();
     console.error(err);
-    toast("error", "Gagal mencatat absensi. Cek koneksi & coba lagi.");
+    toast("error", "Gagal mencatat kehadiran. Cek koneksi & coba lagi.");
   }
 }
 

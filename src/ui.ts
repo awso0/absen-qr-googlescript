@@ -14,7 +14,7 @@ export function renderHome(root: HTMLElement): void {
           el("span", { class: "grad" }, [txt("Absensi QR")]),
         ]),
         el("p", {}, [
-          txt(`Absen ${CLUB_NAME} makin gampang. Scan QR pribadi kamu untuk catat kedatangan — nggak perlu antre tulis manual.`),
+          txt(`Scan QR undangan ${CLUB_NAME} untuk konfirmasi kehadiran — cukup sekali, QR tidak bisa dipakai ulang.`),
         ]),
       ]),
       el("div", { class: "card", style: "padding:20px;" }, [
@@ -104,7 +104,7 @@ export function renderConfirm(root: HTMLElement, s: AppState): void {
           el("input", { class: "input", id: "confirm-nama", type: "text", autocomplete: "off", value: p.nama }),
         ]),
         el("button", { class: "btn btn-success", id: "confirm-btn", type: "button", style: "margin-top:16px;" }, [
-          txt("✔ Konfirmasi Absen"),
+          txt("✔ Konfirmasi Kehadiran"),
         ]),
         el("button", { class: "btn btn-ghost", id: "confirm-back", type: "button", style: "margin-top:10px;" }, [
           txt("← Ulangi scan"),
@@ -128,7 +128,7 @@ export function renderSuccess(root: HTMLElement, s: AppState): void {
       el("div", { class: "success-sub" }, [
         el("p", {}, [
           el("strong", {}, [txt(r.nama)]),
-          txt(" — catatan kamu sudah tersimpan."),
+          txt(" — kehadiran kamu sudah tercatat. QR ini tidak bisa dipakai lagi."),
         ]),
       ]),
       el("div", { class: "card", style: "padding:16px 20px;" }, [
