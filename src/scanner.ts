@@ -1,11 +1,15 @@
 import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
 
 /**
- * Wrapper kecil di atas @zxing/browser untuk scan QR lewat kamera.
+ * Wrapper di atas @zxing/browser untuk scan QR lewat kamera.
  *
- * Alasan pakai library ini: kita bisa mengontrol kamera belakang/depan,
- * dan hasilnya stabil. Fallback manual (mode ID) tetap disediakan kalau
- * izin kamera ditolak / tidak ada kamera.
+ * Kenapa tidak pakai `decodeFromConstraints` langsung?
+ *  - Kita ambil alih `getUserMedia` sendiri supaya preview video langsung
+ *    muncul (responsif) sebelum decoder siap.
+ *  - Resolusi sengaja dibuat rendah (640x480): QR tidak butuh 720p, dan
+ *    frame kecil jauh lebih cepat di-decode sehingga terasa "realtime".
+ *  - `facingMode` dibuat preferensi (ideal) + fallback otomatis, jadi di
+ *    perangkat dengan satu kamera tidak gagal.
  */
 
 export type CameraMode = "environment" | "user";
@@ -17,9 +21,10 @@ export interface QrScannerCallbacks {
 
 export class QrScanner {
   private reader = new BrowserQRCodeReader(undefined, {
-    delayBetweenScanAttempts: 300,
+    delayBetweenScanAttempts: 100, // ~10x decode/detik
   });
   private controls: IScannerControls | null = null;
+  private stream: MediaStream | null = null;
 
   async start(
     videoEl: HTMLVideoElement,
@@ -28,27 +33,27 @@ export class QrScanner {
   ): Promise<void> {
     await this.stop();
 
-    const constraints: MediaStreamConstraints = {
-      audio: false,
-      video: {
-        facingMode: mode,
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
-    };
+    const stream = await this.acquireStream(mode);
+    this.stream = stream;
 
-    // @zxing handle getUserMedia sendiri (minta izin + dapatkan stream)
-    this.controls = await this.reader.decodeFromConstraints(
-      constraints,
+    // Tampilkan preview secepat mungkin
+    videoEl.srcObject = stream;
+    videoEl.setAttribute("playsinline", "true");
+    videoEl.muted = true;
+    try {
+      await videoEl.play();
+    } catch {
+      /* autoplay policy — abaikan, tetap coba decode */
+    }
+
+    // Jalankan decode kontinu di atas video yang sudah jalan
+    this.controls = await this.reader.decodeFromVideoElement(
       videoEl,
       (result, error) => {
         if (result) {
           cb.onResult(result.getText());
         } else if (error && error instanceof Error && cb.onError) {
-          // ZXing melaporkan "QR tidak terlihat" berulang-ulang sebagai
-          // error normal selama kamera menyala tapi belum ada QR di frame.
-          // Nama kelasnya bisa "NotFoundException" / "NotFoundException2" /
-          // berubah-ubah antar versi, jadi filter lewat beberapa sinyal.
+          // "QR belum terlihat" itu normal & sering; jangan teriak.
           const name = error.name || "";
           const ctor = (error as { constructor?: { name?: string } }).constructor?.name || "";
           const msg = error.message || "";
@@ -61,7 +66,42 @@ export class QrScanner {
     );
   }
 
-  /** Berhenti memakai kamera (hentikan stream & lepas video). */
+  /** Minta izin & buka kamera, dengan fallback bertingkat. */
+  private async acquireStream(preferred: CameraMode): Promise<MediaStream> {
+    const videoConstraints: MediaTrackConstraints[] = [
+      // 1) preferensi kamera sesuai mode (ideal → tidak wajib)
+      {
+        facingMode: { ideal: preferred },
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+      },
+      // 2) kalau gagal, coba kamera sebaliknya
+      {
+        facingMode: { ideal: preferred === "environment" ? "user" : "environment" },
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+      },
+      // 3) terakhir: kamera apa pun
+      { width: { ideal: 640 }, height: { ideal: 480 } },
+    ];
+
+    let lastErr: unknown = null;
+    for (const vc of videoConstraints) {
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: vc,
+        });
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    throw lastErr instanceof Error
+      ? lastErr
+      : new Error("Tidak ada kamera yang bisa dibuka.");
+  }
+
+  /** Berhenti: matikan loop decode + lepas & stop semua track kamera. */
   async stop(): Promise<void> {
     if (this.controls) {
       try {
@@ -70,6 +110,10 @@ export class QrScanner {
         /* ignore */
       }
       this.controls = null;
+    }
+    if (this.stream) {
+      this.stream.getTracks().forEach((t) => t.stop());
+      this.stream = null;
     }
   }
 
