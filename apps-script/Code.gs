@@ -30,6 +30,10 @@
  * pernah hadir di Log Absensi, scan berikutnya (kapan pun) ditolak dengan
  * pesan "QR sudah digunakan". Status yang dicatat: "Masuk".
  *
+ * KUOTA: hanya 1 orang per fanbase (permanen utk event ini). Begitu ada
+ * satu orang dari fanbase X tercatat, anggota fanbase X lain ditolak
+ * ("Kuota fanbase X sudah terisi").
+ *
  * Struktur Spreadsheet (2 sheet):
  *   "Master Data" : A:ID  B:Nama  C:Nama Fanbase  D:Nama Member JKT48  E:Status Aktif
  *   "Log Absensi" : A:Timestamp  B:Tanggal  C:ID  D:Nama  E:Nama Fanbase
@@ -124,16 +128,31 @@ function lookupId(rawId) {
           message: `${identitas} berstatus Nonaktif, tidak bisa masuk.`,
         };
       }
-      // QR undangan sekali pakai: cek apakah ID ini sudah pernah tercatat.
       const logSheet = ss.getSheetByName(SHEET_LOG);
       if (logSheet) {
         const logData = logSheet.getDataRange().getValues();
+
+        // QR undangan sekali pakai: tolak kalau ID ini sudah pernah tercatat.
         for (let j = 1; j < logData.length; j++) {
           if (String(logData[j][2]).trim() === id) {
             return {
               ok: false,
               message: `${identitas} — QR sudah digunakan.`,
             };
+          }
+        }
+
+        // Kuota 1 orang per fanbase (permanen utk event ini):
+        // kalau fanbase ini sudah terisi di Log, tolak.
+        if (fanbase) {
+          for (let j = 1; j < logData.length; j++) {
+            const fanbaseLog = String(logData[j][4] || "").trim();
+            if (fanbaseLog && fanbaseLog.toLowerCase() === fanbase.toLowerCase()) {
+              return {
+                ok: false,
+                message: `Kuota fanbase ${fanbase} sudah terisi. ${identitas} tidak bisa masuk.`,
+              };
+            }
           }
         }
       }
@@ -225,6 +244,21 @@ function recordScan(rawId, namaInput) {
     // 3. Tolak kalau QR sudah pernah dipakai (sekali seumur hidup)
     if (pernahDipakai) {
       return { ok: false, message: `${namaLengkap()} — QR sudah digunakan.` };
+    }
+
+    // 3b. Kuota 1 orang per fanbase (permanen utk event ini):
+    //     kalau fanbase dari orang ini sudah ada yang masuk, tolak.
+    const fanbaseOrang = String(found.namaFanbase || "").trim();
+    if (fanbaseOrang) {
+      for (let i = 1; i < logData.length; i++) {
+        const fbLog = String(logData[i][4] || "").trim();
+        if (fbLog && fbLog.toLowerCase() === fanbaseOrang.toLowerCase()) {
+          return {
+            ok: false,
+            message: `Kuota fanbase ${fanbaseOrang} sudah terisi. ${namaLengkap()} tidak bisa masuk.`,
+          };
+        }
+      }
     }
 
     // Anti dobel-klik / scan ganda dalam beberapa detik terakhir
