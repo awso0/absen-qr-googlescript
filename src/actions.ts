@@ -42,24 +42,48 @@ export async function startCamera(): Promise<void> {
     if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("Browser tidak mendukung akses kamera (perlu HTTPS / localhost).");
     }
-    await scanner.start(videoEl, cameraMode, {
-      onResult: (text) => handleScanResult(text),
-      onError: (err) => {
-        // Filter sudah dilakukan di scanner.ts untuk "QR belum terlihat".
-        // Yang sampai ke sini adalah error sungguhan saat runtime decode.
-        console.warn("[scanner]", err);
-      },
-    });
+    // Timeout: kalau getUserMedia menggantung (izin tidak dijawab / kamera
+    // tidak merespons), jangan biarkan layar stuck — kasih pesan & fallback.
+    await withTimeout(
+      scanner.start(videoEl, cameraMode, {
+        onResult: (text) => handleScanResult(text),
+        onError: (err) => {
+          // Filter sudah dilakukan di scanner.ts untuk "QR belum terlihat".
+          // Yang sampai ke sini adalah error sungguhan saat runtime decode.
+          console.warn("[scanner]", err);
+        },
+      }),
+      8000,
+      "Waktu buka kamera habis. Periksa izin kamera lalu coba lagi.",
+    );
   } catch (err) {
     console.error(err);
-    toast(
-      "error",
-      "Tidak bisa membuka kamera. Pastikan izin kamera diberikan & halaman dibuka via HTTPS. Kamu bisa pakai input manual.",
-    );
+    const msg =
+      err instanceof Error && err.message && !err.message.startsWith("Error")
+        ? err.message
+        : "Tidak bisa membuka kamera. Pastikan izin kamera diberikan & halaman dibuka via HTTPS. Kamu bisa pakai input manual.";
+    toast("error", msg);
     stopCamera();
   } finally {
     setState({ busy: false });
   }
+}
+
+/** Jalankan promise tapi batalkan (lewat reject) setelah timeoutMs. */
+function withTimeout<T>(p: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(message)), timeoutMs);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
 }
 
 export function stopCamera(): void {
